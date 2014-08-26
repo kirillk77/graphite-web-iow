@@ -53,6 +53,7 @@ def renderView(request):
     'startTime' : requestOptions['startTime'],
     'endTime' : requestOptions['endTime'],
     'localOnly' : requestOptions['localOnly'],
+    'tenant' : requestOptions['tenant'],
     'data' : []
   }
   data = requestContext['data']
@@ -260,6 +261,7 @@ def parseOptions(request):
     requestOptions['maxDataPoints'] = int(queryParams['maxDataPoints'])
 
   requestOptions['localOnly'] = queryParams.get('local') == '1'
+  requestOptions['tenant'] = request.session['tenant'] 
 
   # Fill in the graphOptions
   for opt in graphClass.customizable:

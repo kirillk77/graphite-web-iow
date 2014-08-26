@@ -34,6 +34,11 @@ def header(request):
   context['profile'] = getProfile(request)
   context['documentation_url'] = settings.DOCUMENTATION_URL
   context['login_url'] = settings.LOGIN_URL
+  context['tenants'] = settings.TENANT_LIST
+  try:
+    context['current_tenant'] = request.session['tenant']
+  except KeyError:
+    context['current_tenant'] = context['tenants'][0] 
   return render_to_response("browserHeader.html", context)
 
 
@@ -41,12 +46,18 @@ def browser(request):
   "View for the top-level frame of the browser UI"
   context = {
     'queryString' : request.GET.urlencode(),
-    'target' : request.GET.get('target')
+    'target' : request.GET.get('target'),
+    'tenant' : request.GET.get('tenant')
   }
   if context['queryString']:
     context['queryString'] = context['queryString'].replace('#','%23')
   if context['target']:
     context['target'] = context['target'].replace('#','%23') #js libs terminate a querystring on #
+  context['tenants'] = settings.TENANT_LIST
+  request.session['tenant'] = context['tenants'][0]
+  if context['tenant']:
+    request.session['tenant'] = context['tenant']
+
   return render_to_response("browser.html", context)
 
 

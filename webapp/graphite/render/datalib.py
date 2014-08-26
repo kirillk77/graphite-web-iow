@@ -94,9 +94,9 @@ def fetchData(requestContext, pathExpr):
   seriesList = []
   startTime = int( time.mktime( requestContext['startTime'].timetuple() ) )
   endTime   = int( time.mktime( requestContext['endTime'].timetuple() ) )
-
-  def _fetchData(pathExpr,startTime, endTime, requestContext, seriesList):
-    matching_nodes = STORE.find(pathExpr, startTime, endTime, local=requestContext['localOnly'])
+  tenant = str( requestContext['tenant'])
+  def _fetchData(pathExpr, tenant, startTime, endTime, requestContext, seriesList):
+    matching_nodes = STORE.find(pathExpr, tenant, startTime, endTime, local=requestContext['localOnly'])
     fetches = [(node, node.fetch(startTime, endTime)) for node in matching_nodes if node.is_leaf]
 
     for node, results in fetches:
@@ -134,7 +134,7 @@ def fetchData(requestContext, pathExpr):
   retries = 1 # start counting at one to make log output and settings more readable
   while True:
     try:
-      seriesList = _fetchData(pathExpr,startTime, endTime, requestContext, seriesList)
+      seriesList = _fetchData(pathExpr, tenant, startTime, endTime, requestContext, seriesList)
       return seriesList
     except Exception, e:
       if retries >= settings.MAX_FETCH_RETRIES:

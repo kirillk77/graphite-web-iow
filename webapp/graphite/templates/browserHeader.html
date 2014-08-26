@@ -64,7 +64,19 @@ limitations under the License. -->
       <span class="title">Graphite</span>
       <div class="nav">
         <ul>
-        {% if user.is_authenticated %}
+          <li>
+	    <form action='/browser' method='get' target='_top'>
+	      <select name='tenant' onchange="this.form.submit()">
+		  {% for tenant in tenants %}
+		   <option value="{{tenant}}"
+		   	{% if tenant == current_tenant %}selected="selected"{% endif %}>
+			{{tenant}}
+		   </option>
+		  {% endfor %}
+	      </select>
+	    </form>
+	  </li>
+	{% if user.is_authenticated %}
           <li>Logged in as <b>{{ user.username }}</b>, <a href="/account/logout/" target="_top">logout</a> (<a href="/account/edit/" target="_top">edit profile</a>)</li>
         {% else %}
           <li><a href="{{login_url}}" target="_top">Login</a></li>

@@ -123,9 +123,9 @@ def find_view(request):
         if ',' in part and '{' not in part:
           query_parts[i] = '{%s}' % part
       query = '.'.join(query_parts)
-
+  tenant = request.session['tenant']
   try:
-    matches = list( STORE.find(query, fromTime, untilTime, local=local_only) )
+    matches = list( STORE.find(query, tenant, fromTime, untilTime, local=local_only) )
   except:
     log.exception()
     raise
@@ -175,7 +175,7 @@ def expand_view(request):
   results = {}
   for query in request.REQUEST.getlist('query'):
     results[query] = set()
-    for node in STORE.find(query, local=local_only):
+    for node in STORE.find(query, tenant, local=local_only):
       if node.is_leaf or not leaves_only:
         results[query].add( node.path )
 
