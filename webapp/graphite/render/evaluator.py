@@ -3,7 +3,7 @@ import time
 from django.conf import settings
 from graphite.render.grammar import grammar
 from graphite.render.datalib import fetchData, TimeSeries
-
+from graphite.logger import log 
 
 def evaluateTarget(requestContext, target):
   tokens = grammar.parseString(target)

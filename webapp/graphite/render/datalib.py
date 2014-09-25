@@ -128,7 +128,6 @@ def fetchData(requestContext, pathExpr):
 
       for series in empty_duplicates:
         seriesList.remove(series)
-
     return seriesList
 
   retries = 1 # start counting at one to make log output and settings more readable

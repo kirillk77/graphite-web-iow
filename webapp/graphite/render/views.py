@@ -14,6 +14,7 @@ limitations under the License."""
 import csv
 import math
 import pytz
+import requests
 from datetime import datetime
 from time import time, mktime
 from random import shuffle
@@ -47,170 +48,35 @@ from django.conf import settings
 def renderView(request):
   start = time()
   (graphOptions, requestOptions) = parseOptions(request)
-  useCache = 'noCache' not in requestOptions
-  cacheTimeout = requestOptions['cacheTimeout']
-  requestContext = {
-    'startTime' : requestOptions['startTime'],
-    'endTime' : requestOptions['endTime'],
-    'localOnly' : requestOptions['localOnly'],
+  post_data  = {
+    'from' : int((requestOptions['startTime']-datetime(1970,1,1,tzinfo=requestOptions['tzinfo'])).total_seconds()),
+    'until' : int((requestOptions['endTime']-datetime(1970,1,1,tzinfo=requestOptions['tzinfo'])).total_seconds()),
     'tenant' : requestOptions['tenant'],
-    'data' : []
+    'format' : requestOptions.get('format'),
+    'target': [t for t in requestOptions['targets'] if t.strip()],
   }
-  data = requestContext['data']
-
-  # First we check the request cache
-  if useCache:
-    requestKey = hashRequest(request)
-    cachedResponse = cache.get(requestKey)
-    if cachedResponse:
-      log.cache('Request-Cache hit [%s]' % requestKey)
-      log.rendering('Returned cached response in %.6f' % (time() - start))
-      return cachedResponse
-    else:
-      log.cache('Request-Cache miss [%s]' % requestKey)
-
-  # Now we prepare the requested data
-  if requestOptions['graphType'] == 'pie':
-    for target in requestOptions['targets']:
-      if target.find(':') >= 0:
-        try:
-          name,value = target.split(':',1)
-          value = float(value)
-        except:
-          raise ValueError("Invalid target '%s'" % target)
-        data.append( (name,value) )
-      else:
-        seriesList = evaluateTarget(requestContext, target)
-
-        for series in seriesList:
-          func = PieFunctions[requestOptions['pieMode']]
-          data.append( (series.name, func(requestContext, series) or 0 ))
-
-  elif requestOptions['graphType'] == 'line':
-    # Let's see if at least our data is cached
-    if useCache:
-      targets = requestOptions['targets']
-      startTime = requestOptions['startTime']
-      endTime = requestOptions['endTime']
-      dataKey = hashData(targets, startTime, endTime)
-      cachedData = cache.get(dataKey)
-      if cachedData:
-        log.cache("Data-Cache hit [%s]" % dataKey)
-      else:
-        log.cache("Data-Cache miss [%s]" % dataKey)
-    else:
-      cachedData = None
-
-    if cachedData is not None:
-      requestContext['data'] = data = cachedData
-    else: # Have to actually retrieve the data now
-      for target in requestOptions['targets']:
-        if not target.strip():
-          continue
-        t = time()
-        seriesList = evaluateTarget(requestContext, target)
-        log.rendering("Retrieval of %s took %.6f" % (target, time() - t))
-        data.extend(seriesList)
-
-      if useCache:
-        cache.add(dataKey, data, cacheTimeout)
-
-    # If data is all we needed, we're done
-    format = requestOptions.get('format')
-    if format == 'csv':
-      response = HttpResponse(content_type='text/csv')
-      writer = csv.writer(response, dialect='excel')
-
-      for series in data:
-        for i, value in enumerate(series):
-          timestamp = datetime.fromtimestamp(series.start + (i * series.step), requestOptions['tzinfo'])
-          writer.writerow((series.name, timestamp.strftime("%Y-%m-%d %H:%M:%S"), value))
-
-      return response
-
-    if format == 'json':
-      series_data = []
-      if 'maxDataPoints' in requestOptions and any(data):
-        startTime = min([series.start for series in data])
-        endTime = max([series.end for series in data])
-        timeRange = endTime - startTime
-        maxDataPoints = requestOptions['maxDataPoints']
-        for series in data:
-          numberOfDataPoints = timeRange/series.step
-          if maxDataPoints < numberOfDataPoints:
-            valuesPerPoint = math.ceil(float(numberOfDataPoints) / float(maxDataPoints))
-            secondsPerPoint = int(valuesPerPoint * series.step)
-            # Nudge start over a little bit so that the consolidation bands align with each call
-            # removing 'jitter' seen when refreshing.
-            nudge = secondsPerPoint + (series.start % series.step) - (series.start % secondsPerPoint)
-            series.start = series.start + nudge
-            valuesToLose = int(nudge/series.step)
-            for r in range(1, valuesToLose):
-              del series[0]
-            series.consolidate(valuesPerPoint)
-            timestamps = range(int(series.start), int(series.end) + 1, int(secondsPerPoint))
-          else:
-            timestamps = range(int(series.start), int(series.end) + 1, int(series.step))
-          datapoints = zip(series, timestamps)
-          series_data.append(dict(target=series.name, datapoints=datapoints))
-      else:
-        for series in data:
-          timestamps = range(int(series.start), int(series.end) + 1, int(series.step))
-          datapoints = zip(series, timestamps)
-          series_data.append(dict(target=series.name, datapoints=datapoints))
-
-      if 'jsonp' in requestOptions:
-        response = HttpResponse(
-          content="%s(%s)" % (requestOptions['jsonp'], json.dumps(series_data)),
-          content_type='text/javascript')
-      else:
-        response = HttpResponse(content=json.dumps(series_data),
-                                content_type='application/json')
-
-      response['Pragma'] = 'no-cache'
-      response['Cache-Control'] = 'no-cache'
-      return response
-
-    if format == 'raw':
-      response = HttpResponse(content_type='text/plain')
-      for series in data:
-        response.write( "%s,%d,%d,%d|" % (series.name, series.start, series.end, series.step) )
-        response.write( ','.join(map(str,series)) )
-        response.write('\n')
-
-      log.rendering('Total rawData rendering time %.6f' % (time() - start))
-      return response
-
-    if format == 'svg':
-      graphOptions['outputFormat'] = 'svg'
-
-    if format == 'pickle':
-      response = HttpResponse(content_type='application/pickle')
-      seriesInfo = [series.getInfo() for series in data]
-      pickle.dump(seriesInfo, response, protocol=-1)
-
-      log.rendering('Total pickle rendering time %.6f' % (time() - start))
-      return response
-
-
-  # We've got the data, now to render it
-  graphOptions['data'] = data
-  if settings.REMOTE_RENDERING: # Rendering on other machines is faster in some situations
-    image = delegateRendering(requestOptions['graphType'], graphOptions)
-  else:
-    image = doImageRender(requestOptions['graphClass'], graphOptions)
-
-  useSVG = graphOptions.get('outputFormat') == 'svg'
-  if useSVG and 'jsonp' in requestOptions:
-    response = HttpResponse(
-      content="%s(%s)" % (requestOptions['jsonp'], json.dumps(image)),
-      content_type='text/javascript')
-  else:
-    response = buildResponse(image, 'image/svg+xml' if useSVG else 'image/png')
-
-  if useCache:
-    cache.set(requestKey, response, cacheTimeout)
-
+  post_data.update(graphOptions)
+  log.rendering(post_data)
+  servers = settings.RENDERING_HOSTS[:] #make a copy so we can shuffle it safely
+  shuffle(servers)
+  for server in servers:
+    start2 = time()
+    try:
+      response = requests.post("%s/render/" % server, data=post_data)
+      assert response.status_code == 200, "Bad response code %d from %s" % (response.status_code,server)
+      contentType = response.headers['Content-Type']
+      imageData = response.content
+      assert contentType == 'image/png', "Bad content type: \"%s\" from %s" % (contentType,server)
+      assert imageData, "Received empty response from %s" % server
+      # Wrap things up
+      log.rendering('Remotely rendered image on %s in %.6f seconds' % (server,time() - start2))
+      log.rendering('Spent a total of %.6f seconds doing remote rendering work' % (time() - start))
+    except:
+      log.exception("Exception while attempting remote rendering request on %s" % server)
+      log.rendering('Exception while remotely rendering on %s wasted %.6f' % (server,time() - start2))
+      continue
+  
+  response = buildResponse(imageData, 'image/png')
   log.rendering('Total rendering time %.6f seconds' % (time() - start))
   return response
 
@@ -260,8 +126,12 @@ def parseOptions(request):
   if 'maxDataPoints' in queryParams and queryParams['maxDataPoints'].isdigit():
     requestOptions['maxDataPoints'] = int(queryParams['maxDataPoints'])
 
+  if 'tenant' in queryParams:
+    requestOptions['tenant'] = queryParams['tenant']
+  else: 
+    requestOptions['tenant'] = request.session['tenant']
+
   requestOptions['localOnly'] = queryParams.get('local') == '1'
-  requestOptions['tenant'] = request.session['tenant'] 
 
   # Fill in the graphOptions
   for opt in graphClass.customizable:
@@ -302,11 +172,43 @@ def parseOptions(request):
 
     requestOptions['startTime'] = startTime
     requestOptions['endTime'] = endTime
-
+    
   return (graphOptions, requestOptions)
 
 
 connectionPools = {}
+
+def delegateRenderIOW(graphOptions,graphType,tenant):
+  start = time()
+  log.rendering(graphOptions['data'])
+  post_data = {'target': [], 'from': '-24hours'}
+  if 'data' in graphOptions:
+    for series in graphOptions['data']:
+      log.rendering(series.name)
+      post_data['target'].append(series.name)
+      post_data['from'] = series.start
+      post_data['until'] = series.end
+  post_data['tenant']=tenant
+  post_data['graphType']=graphType
+  servers = settings.RENDERING_HOSTS[:] #make a copy so we can shuffle it safely
+  shuffle(servers)
+  for server in servers:
+    start2 = time()
+    try: 
+      response = requests.post("%s/render/" % server, data=post_data)
+      assert response.status_code == 200, "Bad response code %d from %s" % (response.status_code,server)
+      contentType = response.headers['Content-Type']
+      imageData = response.content
+      assert contentType == 'image/png', "Bad content type: \"%s\" from %s" % (contentType,server)
+      assert imageData, "Received empty response from %s" % server
+      # Wrap things up
+      log.rendering('Remotely rendered image on %s in %.6f seconds' % (server,time() - start2))
+      log.rendering('Spent a total of %.6f seconds doing remote rendering work' % (time() - start))
+      return imageData
+    except:
+      log.exception("Exception while attempting remote rendering request on %s" % server)
+      log.rendering('Exception while remotely rendering on %s wasted %.6f' % (server,time() - start2))
+      continue
 
 def delegateRendering(graphType, graphOptions):
   start = time()
@@ -328,11 +230,11 @@ def delegateRendering(graphType, graphOptions):
         connection.timeout = settings.REMOTE_RENDER_CONNECT_TIMEOUT
       # Send the request
       try:
-        connection.request('POST','/render/local/', postData)
+        connection.request('POST','/render/', postData)
       except CannotSendRequest:
         connection = HTTPConnectionWithTimeout(server) #retry once
         connection.timeout = settings.REMOTE_RENDER_CONNECT_TIMEOUT
-        connection.request('POST', '/render/local/', postData)
+        connection.request('POST', '/render/', postData)
       # Read the response
       response = connection.getresponse()
       assert response.status == 200, "Bad response code %d from %s" % (response.status,server)
