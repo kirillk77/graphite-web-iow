@@ -65,6 +65,7 @@ limitations under the License. -->
       <div class="nav">
         <ul>
           <li>
+        {% if tenants|length > 2 %}
 	    <form action='/browser' method='get' target='_top'>
 	      <select name='tenant' onchange="this.form.submit()">
 		  {% for tenant in tenants %}
@@ -75,6 +76,7 @@ limitations under the License. -->
 		  {% endfor %}
 	      </select>
 	    </form>
+        {% endif %}
 	  </li>
 	{% if user.is_authenticated %}
           <li>Logged in as <b>{{ user.username }}</b>, <a href="/account/logout/" target="_top">logout</a> (<a href="/account/edit/" target="_top">edit profile</a>)</li>
