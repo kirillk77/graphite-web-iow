@@ -75,7 +75,7 @@ def renderView(request):
       log.exception("Exception while attempting remote rendering request on %s" % server)
       log.rendering('Exception while remotely rendering on %s wasted %.6f' % (server,time() - start2))
       continue
-  
+
   response = buildResponse(imageData, 'image/png')
   log.rendering('Total rendering time %.6f seconds' % (time() - start))
   return response
@@ -126,10 +126,13 @@ def parseOptions(request):
   if 'maxDataPoints' in queryParams and queryParams['maxDataPoints'].isdigit():
     requestOptions['maxDataPoints'] = int(queryParams['maxDataPoints'])
 
+  tenant = ""
   if 'tenant' in queryParams:
-    requestOptions['tenant'] = queryParams['tenant']
-  else: 
-    requestOptions['tenant'] = request.session['tenant']
+    tenant = queryParams['tenant']
+  else:
+    tenant = request.session['tenant']
+  assert tenant in settings.TENANT_LIST, "Invalid tenant \"%s\"" % tenant
+  requestOptions['tenant'] = tenant
 
   requestOptions['localOnly'] = queryParams.get('local') == '1'
 
@@ -172,7 +175,7 @@ def parseOptions(request):
 
     requestOptions['startTime'] = startTime
     requestOptions['endTime'] = endTime
-    
+
   return (graphOptions, requestOptions)
 
 
@@ -194,7 +197,7 @@ def delegateRenderIOW(graphOptions,graphType,tenant):
   shuffle(servers)
   for server in servers:
     start2 = time()
-    try: 
+    try:
       response = requests.post("%s/render/" % server, data=post_data)
       assert response.status_code == 200, "Bad response code %d from %s" % (response.status_code,server)
       contentType = response.headers['Content-Type']
