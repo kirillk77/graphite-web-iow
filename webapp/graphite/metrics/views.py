@@ -35,19 +35,19 @@ def index_json(request):
 
   def find_matches():
     matches = []
-  
+
     for root, dirs, files in os.walk(settings.WHISPER_DIR):
       root = root.replace(settings.WHISPER_DIR, '')
       for basename in files:
         if fnmatch.fnmatch(basename, '*.wsp'):
           matches.append(os.path.join(root, basename))
-  
+
     for root, dirs, files in os.walk(settings.CERES_DIR):
       root = root.replace(settings.CERES_DIR, '')
       for filename in files:
         if filename == '.ceres-node':
           matches.append(root)
-  
+
     matches = [
       m
       .replace('.wsp', '')
@@ -124,6 +124,10 @@ def find_view(request):
           query_parts[i] = '{%s}' % part
       query = '.'.join(query_parts)
   tenant = request.session['tenant']
+
+  if tenant not in settings.TENANT_LIST:
+    return HttpResponseBadRequest(content="Invalid tenant", content_type="text/plain")
+
   try:
     matches = list( STORE.find(query, tenant, fromTime, untilTime, local=local_only) )
   except:
