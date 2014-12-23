@@ -18,7 +18,6 @@ from django.conf import settings
 from graphite.account.models import Profile
 from graphite.compat import HttpResponse
 from graphite.util import getProfile, getProfileByUsername, json
-from graphite.iow_util import check_tenant
 from graphite.logger import log
 from hashlib import md5
 
@@ -26,6 +25,12 @@ try:
   import cPickle as pickle
 except ImportError:
   import pickle
+
+
+def check_tenant(tenant):
+  if tenant not in settings.TENANT_LIST:
+    return settings.TENANT_LIST[0]
+  return tenant
 
 
 def header(request):
