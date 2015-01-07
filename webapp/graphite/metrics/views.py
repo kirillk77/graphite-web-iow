@@ -17,6 +17,7 @@ from django.conf import settings
 from graphite.account.models import Profile
 from graphite.compat import HttpResponse, HttpResponseBadRequest
 from graphite.util import getProfile, getProfileByUsername, json
+from graphite.iow_util import check_tenant
 from graphite.logger import log
 from graphite.storage import STORE
 from graphite.metrics.search import searcher
@@ -123,10 +124,7 @@ def find_view(request):
         if ',' in part and '{' not in part:
           query_parts[i] = '{%s}' % part
       query = '.'.join(query_parts)
-  tenant = request.session['tenant']
-
-  if tenant not in settings.TENANT_LIST:
-    return HttpResponseBadRequest(content="Invalid tenant", content_type="text/plain")
+  tenant = check_tenant(request.session['tenant'])
 
   try:
     matches = list( STORE.find(query, tenant, fromTime, untilTime, local=local_only) )

@@ -131,8 +131,7 @@ def parseOptions(request):
     tenant = queryParams['tenant']
   else:
     tenant = request.session['tenant']
-  assert tenant in settings.TENANT_LIST, "Invalid tenant \"%s\"" % tenant
-  requestOptions['tenant'] = tenant
+  requestOptions['tenant'] = check_tenant(tenant)
 
   requestOptions['localOnly'] = queryParams.get('local') == '1'
 
