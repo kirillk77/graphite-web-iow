@@ -30,6 +30,7 @@ except ImportError:
 
 from graphite.compat import HttpResponse
 from graphite.util import getProfileByUsername, json, unpickle
+from graphite.iow_util import check_tenant
 from graphite.remote_storage import HTTPConnectionWithTimeout
 from graphite.logger import log
 from graphite.render.evaluator import evaluateTarget
