@@ -67,7 +67,6 @@ def renderView(request):
       assert response.status_code == 200, "Bad response code %d from %s" % (response.status_code,server)
       contentType = response.headers['Content-Type']
       imageData = response.content
-      assert contentType == 'image/png', "Bad content type: \"%s\" from %s" % (contentType,server)
       assert imageData, "Received empty response from %s" % server
       # Wrap things up
       log.rendering('Remotely rendered image on %s in %.6f seconds' % (server,time() - start2))
@@ -77,7 +76,7 @@ def renderView(request):
       log.rendering('Exception while remotely rendering on %s wasted %.6f' % (server,time() - start2))
       continue
 
-  response = buildResponse(imageData, 'image/png')
+  response = buildResponse(imageData, contentType)
   log.rendering('Total rendering time %.6f seconds' % (time() - start))
   return response
 
