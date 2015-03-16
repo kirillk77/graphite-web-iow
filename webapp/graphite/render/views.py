@@ -272,7 +272,7 @@ def renderMyGraphView(request,username,graphName):
   if not profile:
     return errorPage("No such user '%s'" % username)
   try:
-    graph = profile.mygraph_set.get(name=graphName)
+    graph = profile.mygraph_set.get(tenat=get_tenant(request),name=graphName)
   except ObjectDoesNotExist:
     return errorPage("User %s doesn't have a MyGraph named '%s'" % (username,graphName))
 
