@@ -23,6 +23,7 @@ from urlparse import urlsplit
 from time import ctime, strftime
 from traceback import format_exc
 from graphite.util import getProfile
+from graphite.iow_util import get_tenant
 from graphite.logger import log
 from graphite.account.models import MyGraph
 
@@ -48,7 +49,7 @@ def composer(request):
 
 def mygraph(request):
   profile = getProfile(request, allowDefault=False)
-  tenant = request.GET['tenant']
+  tenant = get_tenant(request)
 
   if not profile:
     return HttpResponse( "You are not logged in!" )
