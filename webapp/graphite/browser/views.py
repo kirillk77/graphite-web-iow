@@ -18,7 +18,7 @@ from django.conf import settings
 from graphite.account.models import Profile
 from graphite.compat import HttpResponse
 from graphite.util import getProfile, getProfileByUsername, json
-from graphite.iow_util import check_tenant
+from graphite.iow_util import get_tenant
 from graphite.logger import log
 from hashlib import md5
 
@@ -36,10 +36,7 @@ def header(request):
   context['documentation_url'] = settings.DOCUMENTATION_URL
   context['login_url'] = settings.LOGIN_URL
   context['tenants'] = settings.TENANT_LIST
-  try:
-    context['current_tenant'] = check_tenant(request.session['tenant'])
-  except KeyError:
-    context['current_tenant'] = context['tenants'][0]
+  context['current_tenant'] = get_tenant(request)
   return render_to_response("browserHeader.html", context)
 
 
@@ -48,7 +45,7 @@ def browser(request):
   context = {
     'queryString' : request.GET.urlencode(),
     'target' : request.GET.get('target'),
-    'tenant' : check_tenant(request.GET.get('tenant'))
+    'tenant' : get_tenant(request)
   }
   if context['queryString']:
     context['queryString'] = context['queryString'].replace('#','%23')
