@@ -48,6 +48,7 @@ def composer(request):
 
 def mygraph(request):
   profile = getProfile(request, allowDefault=False)
+  tenant = request.GET['tenant']
 
   if not profile:
     return HttpResponse( "You are not logged in!" )
@@ -62,13 +63,13 @@ def mygraph(request):
     url = request.GET['url']
 
     try:
-      existingGraph = profile.mygraph_set.get(name=graphName)
+      existingGraph = profile.mygraph_set.get(tenant=tenant, name=graphName)
       existingGraph.url = url
       existingGraph.save()
 
     except ObjectDoesNotExist:
       try:
-        newGraph = MyGraph(profile=profile,name=graphName,url=url)
+        newGraph = MyGraph(profile=profile,tenant=tenant,name=graphName,url=url)
         newGraph.save()
 
       except:
@@ -79,7 +80,7 @@ def mygraph(request):
 
   elif action == 'delete':
     try:
-      existingGraph = profile.mygraph_set.get(name=graphName)
+      existingGraph = profile.mygraph_set.get(tenant=tenant, name=graphName)
       existingGraph.delete()
 
     except ObjectDoesNotExist:
