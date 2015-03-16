@@ -153,7 +153,9 @@ def myGraphLookup(request):
     else:
       userpath_prefix = ""
 
-    matches = [ graph for graph in profile.mygraph_set.all().order_by('name') if graph.name.startswith(userpath_prefix) ]
+    tenant = get_tenant(request)
+
+    matches = [ graph for graph in profile.mygraph_set.get(tenant=tenant).order_by('name') if graph.name.startswith(userpath_prefix) ]
 
     log.info( "myGraphLookup: username=%s, path=%s, userpath_prefix=%s, %ld graph to process" % (profile.user.username, path, userpath_prefix, len(matches)) )
     branch_inserted = set()
@@ -214,11 +216,13 @@ def userGraphLookup(request):
 
   try:
 
+    tenant = get_tenant(request)
+
     if not username:
       profiles = Profile.objects.exclude(user__username='default')
 
       for profile in profiles:
-        if profile.mygraph_set.count():
+        if profile.mygraph_set.get(tenant=tenant).count():
           node = {
             'text' : str(profile.user.username),
             'id' : str(profile.user.username)
@@ -231,7 +235,7 @@ def userGraphLookup(request):
       profile = getProfileByUsername(username)
       assert profile, "No profile for username '%s'" % username
 
-      for graph in profile.mygraph_set.all().order_by('name'):
+      for graph in profile.mygraph_set.get(tenant=tenant).order_by('name'):
         node = {
           'text' : str(graph.name),
           'id' : str(graph.name),
