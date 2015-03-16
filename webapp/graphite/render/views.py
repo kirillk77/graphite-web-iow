@@ -30,7 +30,7 @@ except ImportError:
 
 from graphite.compat import HttpResponse
 from graphite.util import getProfileByUsername, json, unpickle
-from graphite.iow_util import check_tenant
+from graphite.iow_util import get_tenant
 from graphite.remote_storage import HTTPConnectionWithTimeout
 from graphite.logger import log
 from graphite.render.evaluator import evaluateTarget
@@ -126,12 +126,7 @@ def parseOptions(request):
   if 'maxDataPoints' in queryParams and queryParams['maxDataPoints'].isdigit():
     requestOptions['maxDataPoints'] = int(queryParams['maxDataPoints'])
 
-  tenant = ""
-  if 'tenant' in queryParams:
-    tenant = queryParams['tenant']
-  else:
-    tenant = request.session['tenant']
-  requestOptions['tenant'] = check_tenant(tenant)
+  requestOptions['tenant'] = get_tenant(request)
 
   requestOptions['localOnly'] = queryParams.get('local') == '1'
 
