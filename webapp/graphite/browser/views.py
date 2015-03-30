@@ -194,7 +194,7 @@ def userGraphLookup(request):
       profiles = Profile.objects.exclude(user__username='default')
 
       for profile in profiles:
-        if profile.mygraph_set.get(tenant=tenant).count():
+        if profile.mygraph_set.all().filter(tenant=tenant).count():
           node = {
             'text' : str(profile.user.username),
             'id' : str(profile.user.username)
