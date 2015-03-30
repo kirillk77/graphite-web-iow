@@ -188,7 +188,7 @@ def userGraphLookup(request):
 
   try:
 
-    tenat = get_tenant(request)
+    tenant = get_tenant(request)
 
     if not username:
       profiles = Profile.objects.exclude(user__username='default')
