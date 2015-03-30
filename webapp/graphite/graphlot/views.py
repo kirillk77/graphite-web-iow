@@ -155,7 +155,7 @@ def myGraphLookup(request):
 
     tenant = get_tenant(request)
 
-    matches = [ graph for graph in profile.mygraph_set.get(tenant=tenant).order_by('name') if graph.name.startswith(userpath_prefix) ]
+    matches = [ graph for graph in profile.mygraph_set.all().filter(tenant=tenant).order_by('name') if graph.name.startswith(userpath_prefix) ]
 
     log.info( "myGraphLookup: username=%s, path=%s, userpath_prefix=%s, %ld graph to process" % (profile.user.username, path, userpath_prefix, len(matches)) )
     branch_inserted = set()
