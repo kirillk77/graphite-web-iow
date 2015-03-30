@@ -235,7 +235,7 @@ def userGraphLookup(request):
       profile = getProfileByUsername(username)
       assert profile, "No profile for username '%s'" % username
 
-      for graph in profile.mygraph_set.get(tenant=tenant).order_by('name'):
+      for graph in profile.mygraph_set.all().filter(tenant=tenant).order_by('name'):
         node = {
           'text' : str(graph.name),
           'id' : str(graph.name),
