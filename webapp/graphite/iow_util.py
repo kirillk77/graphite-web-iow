@@ -4,8 +4,10 @@ def get_tenant(request):
   tenant = ""
   if 'tenant' in request.GET:
     tenant = request.GET['tenant']
-  else:
+  elif 'tenant' in request.session:
     tenant = request.session['tenant']
+  else:
+    tenant = None
   return check_tenant(tenant)
 
 def check_tenant(tenant):
