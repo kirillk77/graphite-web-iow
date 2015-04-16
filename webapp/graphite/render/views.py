@@ -50,8 +50,8 @@ def renderView(request):
   start = time()
   (graphOptions, requestOptions) = parseOptions(request)
   post_data  = {
-    'from' : int((requestOptions['startTime']-datetime(1970,1,1,tzinfo=requestOptions['tzinfo'])).total_seconds()),
-    'until' : int((requestOptions['endTime']-datetime(1970,1,1,tzinfo=requestOptions['tzinfo'])).total_seconds()),
+    'from' : int(requestOptions['startTime'].strftime('%s')),
+    'until' : int(requestOptions['endTime'].strftime('%s')),
     'tenant' : requestOptions['tenant'],
     'format' : requestOptions.get('format'),
     'target': [t for t in requestOptions['targets'] if t.strip()],
