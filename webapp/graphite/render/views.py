@@ -55,7 +55,7 @@ def renderView(request):
     'tenant' : requestOptions['tenant'],
     'format' : requestOptions.get('format'),
     'target': [t for t in requestOptions['targets'] if t.strip()],
-    'tzinfo': str(requestOptions['tzinfo']),
+    'tz': str(requestOptions['tzinfo']),
   }
   post_data.update(graphOptions)
   log.rendering(post_data)
