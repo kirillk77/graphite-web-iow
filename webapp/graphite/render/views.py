@@ -56,7 +56,13 @@ def renderView(request):
     'format' : requestOptions.get('format'),
     'target': [t for t in requestOptions['targets'] if t.strip()],
     'tz': str(requestOptions['tzinfo']),
+    'graphType': str(requestOptions['graphType']),
+    'pieMode': str(requestOptions['pieMode']),
   }
+
+  if 'maxDataPoints' in requestOptions:
+    post_data['maxDataPoints'] = str(requestOptions['maxDataPoints'])
+
   post_data.update(graphOptions)
   log.rendering(post_data)
   servers = settings.RENDERING_HOSTS[:] #make a copy so we can shuffle it safely
