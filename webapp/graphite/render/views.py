@@ -80,6 +80,7 @@ def renderView(request):
       # Wrap things up
       log.rendering('Remotely rendered image on %s in %.6f seconds' % (server,time() - start2))
       log.rendering('Spent a total of %.6f seconds doing remote rendering work' % (time() - start))
+      break
     except:
       log.exception("Exception while attempting remote rendering request on %s" % server)
       log.rendering('Exception while remotely rendering on %s wasted %.6f' % (server,time() - start2))
