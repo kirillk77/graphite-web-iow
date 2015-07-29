@@ -44,6 +44,8 @@ from django.template import Context, loader
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
+from datetime import timedelta
+
 
 
 def renderView(request):
@@ -164,7 +166,7 @@ def parseOptions(request):
     if 'until' in queryParams:
       untilTime = parseATTime(queryParams['until'], tzinfo)
     else:
-      untilTime = parseATTime('now', tzinfo)
+      untilTime = parseATTime('now', tzinfo) - timedelta(minutes=1)
     if 'from' in queryParams:
       fromTime = parseATTime(queryParams['from'], tzinfo)
     else:
