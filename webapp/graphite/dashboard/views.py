@@ -15,6 +15,7 @@ from graphite.compat import HttpResponse
 from graphite.dashboard.models import Dashboard, Template
 from graphite.render.views import renderView
 from send_graph import send_graph_email
+from graphite.iow_util import get_tenant
 
 
 fieldRegex = re.compile(r'<([^>]+)>')
@@ -220,15 +221,17 @@ def getPermissions(user):
 
 
 def save(request, name):
+  tenant = get_tenant(request)
+
   if 'change' not in getPermissions(request.user):
     return json_response( dict(error="Must be logged in with appropriate permissions to save") )
   # Deserialize and reserialize as a validation step
   state = str( json.dumps( json.loads( request.POST['state'] ) ) )
 
   try:
-    dashboard = Dashboard.objects.get(name=name)
+    dashboard = Dashboard.objects.get(name=name, tenant=tenant)
   except Dashboard.DoesNotExist:
-    dashboard = Dashboard.objects.create(name=name, state=state)
+    dashboard = Dashboard.objects.create(name=name, state=state, tenant=tenant)
   else:
     dashboard.state = state
     dashboard.save();
@@ -237,15 +240,17 @@ def save(request, name):
 
 
 def save_template(request, name, key):
+  tenant = get_tenant(request)
+
   if 'change' not in getPermissions(request.user):
     return json_response( dict(error="Must be logged in with appropriate permissions to save the template") )
   # Deserialize and reserialize as a validation step
   state = str( json.dumps( json.loads( request.POST['state'] ) ) )
 
   try:
-    template = Template.objects.get(name=name)
+    template = Template.objects.get(name=name, tenant=tenant)
   except Template.DoesNotExist:
-    template = Template.objects.create(name=name)
+    template = Template.objects.create(name=name, tenant=tenant)
     template.setState(state)
     template.save()
   else:
@@ -256,8 +261,10 @@ def save_template(request, name, key):
 
 
 def load(request, name):
+  tenant = get_tenant(request)
+
   try:
-    dashboard = Dashboard.objects.get(name=name)
+    dashboard = Dashboard.objects.get(name=name, tenant=tenant)
   except Dashboard.DoesNotExist:
     return json_response( dict(error="Dashboard '%s' does not exist. " % name) )
 
@@ -265,8 +272,10 @@ def load(request, name):
 
 
 def load_template(request, name, val):
+  tenant = get_tenant(request)
+
   try:
-    template = Template.objects.get(name=name)
+    template = Template.objects.get(name=name, tenant=tenant)
   except Template.DoesNotExist:
     return json_response( dict(error="Template '%s' does not exist. " % name) )
 
@@ -276,11 +285,13 @@ def load_template(request, name, val):
 
 
 def delete(request, name):
+  tenant = get_tenant(request)
+
   if 'delete' not in getPermissions(request.user):
     return json_response( dict(error="Must be logged in with appropriate permissions to delete") )
 
   try:
-    dashboard = Dashboard.objects.get(name=name)
+    dashboard = Dashboard.objects.get(name=name, tenant=tenant)
   except Dashboard.DoesNotExist:
     return json_response( dict(error="Dashboard '%s' does not exist. " % name) )
   else:
@@ -289,11 +300,13 @@ def delete(request, name):
 
 
 def delete_template(request, name):
+  tenant = get_tenant(request)
+
   if 'delete' not in getPermissions(request.user):
     return json_response( dict(error="Must be logged in with appropriate permissions to delete the template") )
 
   try:
-    template = Template.objects.get(name=name)
+    template = Template.objects.get(name=name, tenant=tenant)
   except Dashboard.DoesNotExist:
     return json_response( dict(error="Template '%s' does not exist. " % name) )
   else:
@@ -306,8 +319,10 @@ def find(request):
   query_terms = set( query.lower().split() )
   results = []
 
+  tenant = get_tenant(request)
+
   # Find all dashboard names that contain each of our query terms as a substring
-  for dashboard in Dashboard.objects.all():
+  for dashboard in Dashboard.objects.all().filter(tenant=tenant).order_by('name'):
     name = dashboard.name.lower()
     if name.startswith('temporary-'):
       continue
@@ -331,8 +346,10 @@ def find_template(request):
   query_terms = set( query.lower().split() )
   results = []
 
+  tenant = get_tenant(request)
+
   # Find all dashboard names that contain each of our query terms as a substring
-  for template in Template.objects.all():
+  for template in Template.objects.all().filter(tenant=tenant).order_by('name'):
     name = template.name.lower()
 
     found = True # blank queries return everything
@@ -381,6 +398,8 @@ def email(request):
 
 
 def create_temporary(request):
+  tenant = get_tenant(request)
+
   state = str( json.dumps( json.loads( request.POST['state'] ) ) )
   i = 0
   while True:
@@ -388,7 +407,7 @@ def create_temporary(request):
     try:
       Dashboard.objects.get(name=name)
     except Dashboard.DoesNotExist:
-      dashboard = Dashboard.objects.create(name=name, state=state)
+      dashboard = Dashboard.objects.create(name=name, state=state, tenant=tenant)
       break
     else:
       i += 1
