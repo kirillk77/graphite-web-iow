@@ -77,7 +77,8 @@ def renderView(request):
       return HttpResponse(bytes(response.content), status=response.status_code)
     contentType = response.headers['Content-Type']
     imageData = response.content
-    assert imageData, "Received empty response from %s" % servers[0]
+    # This assert is not needed - it's perfectly OK to get empty response when there is no data
+    #assert imageData, "Received empty response from %s" % servers[0]
     # Wrap things up
     log.rendering('Remotely rendered image on %s in %.6f seconds' % (servers[0],time() - start2))
     log.rendering('Spent a total of %.6f seconds doing remote rendering work' % (time() - start))
