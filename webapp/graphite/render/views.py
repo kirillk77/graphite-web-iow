@@ -68,23 +68,23 @@ def renderView(request):
   post_data.update(graphOptions)
   log.rendering(post_data)
   servers = settings.RENDERING_HOSTS[:] #make a copy so we can shuffle it safely
+
   shuffle(servers)
-  for server in servers:
-    start2 = time()
-    try:
-      response = requests.post("%s/render/" % server, data=post_data)
-      assert response.status_code == 200, "Bad response code %d from %s" % (response.status_code,server)
-      contentType = response.headers['Content-Type']
-      imageData = response.content
-      assert imageData, "Received empty response from %s" % server
-      # Wrap things up
-      log.rendering('Remotely rendered image on %s in %.6f seconds' % (server,time() - start2))
-      log.rendering('Spent a total of %.6f seconds doing remote rendering work' % (time() - start))
-      break
-    except:
-      log.exception("Exception while attempting remote rendering request on %s" % server)
-      log.rendering('Exception while remotely rendering on %s wasted %.6f' % (server,time() - start2))
-      continue
+  start2 = time()
+  try:
+    response = requests.post("%s/render/" % servers[0], data=post_data)
+    if response.status_code != 200:
+      return HttpResponse(bytes(response.content), status=response.status_code)
+    contentType = response.headers['Content-Type']
+    imageData = response.content
+    assert imageData, "Received empty response from %s" % servers[0]
+    # Wrap things up
+    log.rendering('Remotely rendered image on %s in %.6f seconds' % (servers[0],time() - start2))
+    log.rendering('Spent a total of %.6f seconds doing remote rendering work' % (time() - start))
+  except Exception as e:
+    log.exception("Exception while attempting remote rendering request on %s" % servers[0])
+    log.rendering('Exception while remotely rendering on %s wasted %.6f' % (servers[0],time() - start2))
+    return HttpResponse(bytes(type(e)), status=500)
 
   response = buildResponse(imageData, contentType)
   log.rendering('Total rendering time %.6f seconds' % (time() - start))
