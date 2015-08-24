@@ -7,6 +7,7 @@ class Dashboard(models.Model):
   name = models.CharField(primary_key=True, max_length=128)
   owners = models.ManyToManyField(Profile, related_name='dashboards')
   state = models.TextField()
+  tenant = models.TextField()
   __str__ = lambda self: "Dashboard [%s]" % self.name
 
 class Template(models.Model):
@@ -15,6 +16,7 @@ class Template(models.Model):
   name = models.CharField(primary_key=True, max_length=128)
   owners = models.ManyToManyField(Profile, related_name='templates')
   state = models.TextField()
+  tenant = models.TextField()
   __str__ = lambda self: "Template [%s]" % self.name
 
   def loadState(self, val):
